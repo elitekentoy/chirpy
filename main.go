@@ -9,6 +9,7 @@ import (
 
 	"github.com/elitekentoy/chirpy/internal/database"
 	"github.com/joho/godotenv"
+	_ "github.com/lib/pq"
 )
 
 func main() {
@@ -18,7 +19,7 @@ func main() {
 	dbURL := os.Getenv("DB_URL")
 	db, err := sql.Open("postgres", dbURL)
 	if err != nil {
-		os.Exit(1)
+		log.Fatal("cannot initialize database")
 	}
 
 	dbQueries := database.New(db)
@@ -38,6 +39,9 @@ func main() {
 
 	// Define validate chirp endpoint
 	serveMux.HandleFunc("POST /api/validate_chirp", handlerValidateChirp)
+
+	// Define users endpoint
+	serveMux.HandleFunc("POST /api/users", apiConfig.handlerUsers)
 
 	// Define metric endpoint
 	serveMux.HandleFunc("GET /admin/metrics", apiConfig.handlerMetrics)
