@@ -18,3 +18,18 @@ func (config *apiConfig) handlerHits(writer http.ResponseWriter, req *http.Reque
 	// Write the response body
 	writer.Write([]byte(data))
 }
+
+func (config *apiConfig) handlerMetrics(writer http.ResponseWriter, req *http.Request) {
+	template := `<html>
+						<body>
+							<h1>Welcome, Chirpy Admin</h1>
+						<p>Chirpy has been visited %d times!</p>
+						</body>
+					</html>`
+	data := fmt.Sprintf(template, config.FileserverHits.Load())
+
+	writer.Header().Set("Cache-Control", "no-cache")
+	writer.Header().Set("Content-Type", "text/html; charset=utf-8")
+
+	writer.Write([]byte(data))
+}

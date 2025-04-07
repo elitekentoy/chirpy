@@ -21,10 +21,10 @@ func main() {
 	serveMux.HandleFunc("GET /api/healthz", handlerReadiness)
 
 	// Define metric endpoint
-	serveMux.HandleFunc("GET /api/metrics", apiConfig.handlerHits)
+	serveMux.HandleFunc("GET /admin/metrics", apiConfig.handlerMetrics)
 
 	// Define reset endpoint
-	serveMux.HandleFunc("POST /api/reset", apiConfig.handlerReset)
+	serveMux.HandleFunc("POST /admin/reset", apiConfig.handlerReset)
 
 	// Setup HTTP Server
 	server := http.Server{
