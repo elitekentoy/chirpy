@@ -20,6 +20,9 @@ func main() {
 	// Define health check endpoint
 	serveMux.HandleFunc("GET /api/healthz", handlerReadiness)
 
+	// Define validate chirp endpoint
+	serveMux.HandleFunc("POST /api/validate_chirp", handlerValidateChirp)
+
 	// Define metric endpoint
 	serveMux.HandleFunc("GET /admin/metrics", apiConfig.handlerMetrics)
 
