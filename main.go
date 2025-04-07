@@ -3,15 +3,30 @@ package main
 import (
 	"log"
 	"net/http"
-
-	handlers "github.com/elitekentoy/chirpy/handlers/readiness"
+	"sync/atomic"
 )
 
 func main() {
-	serveMux := http.NewServeMux()
-	serveMux.Handle("/app/", http.StripPrefix("/app", http.FileServer(http.Dir(root))))
-	serveMux.HandleFunc("/healthz", handlers.Readiness)
 
+	apiConfig := &apiConfig{
+		FileserverHits: atomic.Int32{},
+	}
+
+	serveMux := http.NewServeMux()
+
+	// Setup file serving with middleware to count hits
+	serveMux.Handle("/app/", apiConfig.MiddlewareMetricInc(http.StripPrefix("/app", http.FileServer(http.Dir(root)))))
+
+	// Define health check endpoint
+	serveMux.HandleFunc("/healthz", handlerReadiness)
+
+	// Define metric endpoint
+	serveMux.HandleFunc("/metrics", apiConfig.handlerHits)
+
+	// Define reset endpoint
+	serveMux.HandleFunc("/reset", apiConfig.handlerReset)
+
+	// Setup HTTP Server
 	server := http.Server{
 		Handler: serveMux,
 		Addr:    ":" + listeningPort,

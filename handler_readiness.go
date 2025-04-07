@@ -1,8 +1,8 @@
-package handlers
+package main
 
 import "net/http"
 
-func Readiness(writer http.ResponseWriter, req *http.Request) {
+func handlerReadiness(writer http.ResponseWriter, req *http.Request) {
 	// Set Content Type
 	req.Header.Set("content-type", "text/plain; charset=utf-8")
 
