@@ -24,12 +24,19 @@ func (config *apiConfig) handlerUsers(writer http.ResponseWriter, req *http.Requ
 		return
 	}
 
-	user, err := config.Database.CreateUser(req.Context(), database.CreateUserParams{
+	dbUser, err := config.Database.CreateUser(req.Context(), database.CreateUserParams{
 		ID:        uuid.New(),
 		CreatedAt: time.Now(),
 		UpdatedAt: time.Now(),
 		Email:     request.Email,
 	})
+
+	user := User{
+		ID:        dbUser.ID,
+		CreatedAt: dbUser.CreatedAt,
+		UpdatedAt: dbUser.UpdatedAt,
+		Email:     dbUser.Email,
+	}
 
 	if err != nil {
 		http.Error(writer, "error occured in database", http.StatusInternalServerError)
