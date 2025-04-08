@@ -100,8 +100,16 @@ func (config *apiConfig) handlerLogin(writer http.ResponseWriter, req *http.Requ
 		return
 	}
 
+	user := models.UserFromDatabase(dbUser)
+	data, err := json.Marshal(user)
+
+	if err != nil {
+		http.Error(writer, "error in serializing user", http.StatusInternalServerError)
+		return
+	}
+
 	writer.Header().Set("Content-Type", "application/json")
 	writer.WriteHeader(http.StatusOK)
 
-	writer.Write([]byte("OK"))
+	writer.Write(data)
 }
