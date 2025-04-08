@@ -24,6 +24,7 @@ func (config *apiConfig) handlerCreateChirp(writer http.ResponseWriter, req *htt
 
 	if err != nil {
 		http.Error(writer, "error decoding the request", http.StatusInternalServerError)
+		return
 	}
 
 	dbChirp, err := config.Database.CreateChirp(req.Context(), database.CreateChirpParams{
@@ -46,6 +47,7 @@ func (config *apiConfig) handlerCreateChirp(writer http.ResponseWriter, req *htt
 	data, err := json.Marshal(chirp)
 	if err != nil {
 		http.Error(writer, "error serializing chirp", http.StatusInternalServerError)
+		return
 	}
 
 	writer.WriteHeader(http.StatusCreated)
@@ -58,6 +60,7 @@ func (config *apiConfig) handlerGetChirps(writer http.ResponseWriter, req *http.
 	dbChirps, err := config.Database.GetChirps(req.Context())
 	if err != nil {
 		http.Error(writer, "error connecting to the database", http.StatusInternalServerError)
+		return
 	}
 
 	chirps := []models.Chirp{}
@@ -68,6 +71,7 @@ func (config *apiConfig) handlerGetChirps(writer http.ResponseWriter, req *http.
 	data, err := json.Marshal(chirps)
 	if err != nil {
 		http.Error(writer, "error seraializing chirps", http.StatusInternalServerError)
+		return
 	}
 
 	writer.WriteHeader(http.StatusOK)
