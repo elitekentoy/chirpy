@@ -52,6 +52,9 @@ func main() {
 	// Define create chirp endpoint
 	serveMux.HandleFunc("POST /api/chirps", apiConfig.handlerCreateChirp)
 
+	// Define login endpoing
+	serveMux.HandleFunc("POST /api/login", apiConfig.handlerLogin)
+
 	// Define metric endpoint
 	serveMux.HandleFunc("GET /admin/metrics", apiConfig.handlerMetrics)
 

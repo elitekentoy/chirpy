@@ -1,6 +1,7 @@
 package main
 
 import (
+	"database/sql"
 	"encoding/json"
 	"net/http"
 	"time"
@@ -63,4 +64,44 @@ func (config *apiConfig) handlerUsers(writer http.ResponseWriter, req *http.Requ
 	writer.WriteHeader(http.StatusCreated)
 
 	writer.Write(data)
+}
+
+func (config *apiConfig) handlerLogin(writer http.ResponseWriter, req *http.Request) {
+
+	request := UsersRequestBody{}
+	decoder := json.NewDecoder(req.Body)
+	err := decoder.Decode(&request)
+
+	if err != nil {
+		http.Error(writer, "error deserializing request", http.StatusInternalServerError)
+	}
+
+	if request.Email == "" || request.Password == "" {
+		http.Error(writer, "email or password cannot be empty", http.StatusBadRequest)
+		return
+	}
+
+	dbUser, err := config.Database.GetUserByEmail(req.Context(), request.Email)
+	if err != nil {
+
+		if err == sql.ErrNoRows {
+			http.Error(writer, "user not found", http.StatusNotFound)
+			return
+		}
+
+		http.Error(writer, "error occured in communicating to the database", http.StatusInternalServerError)
+		return
+	}
+
+	valid := auth.CheckPasswordHash(dbUser.HashedPassword, request.Password) == nil
+
+	if !valid {
+		http.Error(writer, "Incorrect email or password", http.StatusUnauthorized)
+		return
+	}
+
+	writer.Header().Set("Content-Type", "application/json")
+	writer.WriteHeader(http.StatusOK)
+
+	writer.Write([]byte("OK"))
 }
