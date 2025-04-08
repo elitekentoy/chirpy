@@ -118,5 +118,4 @@ func (config *apiConfig) handlerGetChirp(writer http.ResponseWriter, req *http.R
 	writer.WriteHeader(http.StatusOK)
 
 	writer.Write(data)
-	return
 }
