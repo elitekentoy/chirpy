@@ -9,13 +9,13 @@ import (
 	"github.com/google/uuid"
 )
 
-type requestBody struct {
+type UsersRequestBody struct {
 	Email string `json:"email"`
 }
 
 func (config *apiConfig) handlerUsers(writer http.ResponseWriter, req *http.Request) {
 
-	request := requestBody{}
+	request := UsersRequestBody{}
 	decoder := json.NewDecoder(req.Body)
 	err := decoder.Decode(&request)
 
