@@ -21,14 +21,6 @@ type User struct {
 	Email     string    `json:"email"`
 }
 
-type Chirp struct {
-	ID        uuid.UUID `json:"id"`
-	CreatedAt time.Time `json:"created_at"`
-	UpdatedAt time.Time `json:"updated_at"`
-	Body      string    `json:"body"`
-	UserID    uuid.UUID `json:"user_id"`
-}
-
 func main() {
 
 	godotenv.Load()
@@ -54,14 +46,17 @@ func main() {
 	// Define health check endpoint
 	serveMux.HandleFunc("GET /api/healthz", handlerReadiness)
 
+	// Define get all chirps endpoint
+	serveMux.HandleFunc("GET /api/chirps", apiConfig.handlerGetChirps)
+
 	// Define validate chirp endpoint
 	serveMux.HandleFunc("POST /api/validate_chirp", handlerValidateChirp)
 
 	// Define users endpoint
 	serveMux.HandleFunc("POST /api/users", apiConfig.handlerUsers)
 
-	// Define chirps endpoint
-	serveMux.HandleFunc("POST /api/chirps", apiConfig.handlerChirps)
+	// Define create chirp endpoint
+	serveMux.HandleFunc("POST /api/chirps", apiConfig.handlerCreateChirp)
 
 	// Define metric endpoint
 	serveMux.HandleFunc("GET /admin/metrics", apiConfig.handlerMetrics)

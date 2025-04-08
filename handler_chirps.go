@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/elitekentoy/chirpy/internal/database"
+	"github.com/elitekentoy/chirpy/models"
 	"github.com/google/uuid"
 )
 
@@ -14,7 +15,7 @@ type ChirpRequestBody struct {
 	UserID uuid.UUID `json:"user_id"`
 }
 
-func (config *apiConfig) handlerChirps(writer http.ResponseWriter, req *http.Request) {
+func (config *apiConfig) handlerCreateChirp(writer http.ResponseWriter, req *http.Request) {
 
 	request := ChirpRequestBody{}
 	decoder := json.NewDecoder(req.Body)
@@ -39,13 +40,7 @@ func (config *apiConfig) handlerChirps(writer http.ResponseWriter, req *http.Req
 		http.Error(writer, "error processing to the database", http.StatusInternalServerError)
 	}
 
-	chirp := Chirp{
-		ID:        dbChirp.ID,
-		CreatedAt: dbChirp.CreatedAt,
-		UpdatedAt: dbChirp.UpdatedAt,
-		Body:      dbChirp.Body,
-		UserID:    dbChirp.UserID.UUID,
-	}
+	chirp := models.ChirpFromDatabase(dbChirp)
 
 	data, err := json.Marshal(chirp)
 	if err != nil {
@@ -53,6 +48,28 @@ func (config *apiConfig) handlerChirps(writer http.ResponseWriter, req *http.Req
 	}
 
 	writer.WriteHeader(http.StatusCreated)
+	writer.Header().Set("Content-Type", "application/json")
+
+	writer.Write(data)
+}
+
+func (config *apiConfig) handlerGetChirps(writer http.ResponseWriter, req *http.Request) {
+	dbChirps, err := config.Database.GetChirps(req.Context())
+	if err != nil {
+		http.Error(writer, "error connecting to the database", http.StatusInternalServerError)
+	}
+
+	chirps := []models.Chirp{}
+	for _, chirp := range dbChirps {
+		chirps = append(chirps, models.ChirpFromDatabase(chirp))
+	}
+
+	data, err := json.Marshal(chirps)
+	if err != nil {
+		http.Error(writer, "error seraializing chirps", http.StatusInternalServerError)
+	}
+
+	writer.WriteHeader(http.StatusOK)
 	writer.Header().Set("Content-Type", "application/json")
 
 	writer.Write(data)
