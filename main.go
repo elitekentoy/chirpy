@@ -46,6 +46,9 @@ func main() {
 	// Define health check endpoint
 	serveMux.HandleFunc("GET /api/healthz", handlerReadiness)
 
+	// Define get one chirp by ID
+	serveMux.HandleFunc("GET /api/chirps/{chirpID}", apiConfig.handlerGetChirp)
+
 	// Define get all chirps endpoint
 	serveMux.HandleFunc("GET /api/chirps", apiConfig.handlerGetChirps)
 

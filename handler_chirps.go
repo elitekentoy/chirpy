@@ -1,6 +1,7 @@
 package main
 
 import (
+	"database/sql"
 	"encoding/json"
 	"net/http"
 	"time"
@@ -73,4 +74,45 @@ func (config *apiConfig) handlerGetChirps(writer http.ResponseWriter, req *http.
 	writer.Header().Set("Content-Type", "application/json")
 
 	writer.Write(data)
+}
+
+func (config *apiConfig) handlerGetChirp(writer http.ResponseWriter, req *http.Request) {
+	chirpID := req.PathValue("chirpID")
+
+	if chirpID == "" {
+		http.Error(writer, "chirp id is not specified", http.StatusBadRequest)
+		return
+	}
+
+	chirpUUID, err := uuid.Parse(chirpID)
+	if err != nil {
+		http.Error(writer, "error parsing chirp id", http.StatusInternalServerError)
+		return
+	}
+
+	dbChirp, err := config.Database.GetChirpByID(req.Context(), chirpUUID)
+	if err != nil {
+
+		if err == sql.ErrNoRows {
+			http.Error(writer, "chirp id is not found", http.StatusNotFound)
+			return
+		}
+
+		http.Error(writer, "database error occured", http.StatusInternalServerError)
+		return
+	}
+
+	chirp := models.ChirpFromDatabase(dbChirp)
+
+	data, err := json.Marshal(chirp)
+	if err != nil {
+		http.Error(writer, "error in serializing chirp", http.StatusInternalServerError)
+		return
+	}
+
+	writer.Header().Set("Content-Type", "application/json")
+	writer.WriteHeader(http.StatusOK)
+
+	writer.Write(data)
+	return
 }
