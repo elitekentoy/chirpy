@@ -70,7 +70,24 @@ func (config *apiConfig) handlerCreateChirp(writer http.ResponseWriter, req *htt
 }
 
 func (config *apiConfig) handlerGetChirps(writer http.ResponseWriter, req *http.Request) {
-	dbChirps, err := config.Database.GetChirps(req.Context())
+	authorID := req.URL.Query().Get("author_id")
+	uid, err := uuid.Parse(authorID)
+	if err != nil {
+		http.Error(writer, "error parsing user id", http.StatusInternalServerError)
+		return
+	}
+
+	dbChirps := []database.Chirp{}
+
+	if authorID == "" {
+		dbChirps, err = config.Database.GetChirps(req.Context())
+	} else {
+		dbChirps, err = config.Database.GetChirpsByUserID(req.Context(), uuid.NullUUID{
+			UUID:  uid,
+			Valid: true,
+		})
+	}
+
 	if err != nil {
 		http.Error(writer, "error connecting to the database", http.StatusInternalServerError)
 		return
