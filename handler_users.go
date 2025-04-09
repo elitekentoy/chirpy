@@ -141,3 +141,83 @@ func (config *apiConfig) handlerLogin(writer http.ResponseWriter, req *http.Requ
 
 	writer.Write(data)
 }
+
+func (config *apiConfig) handlerUpdateUserDetails(writer http.ResponseWriter, req *http.Request) {
+	headerToken, err := auth.GetBearerToken(req.Header)
+	if err != nil || headerToken == "" {
+		http.Error(writer, "invalid token", http.StatusUnauthorized)
+		return
+	}
+
+	uid, err := auth.ValidateJWT(headerToken, config.ApiSecret)
+	if uid == uuid.Nil || err != nil {
+		http.Error(writer, "invalid token", http.StatusUnauthorized)
+		return
+	}
+
+	request := UsersRequestBody{}
+	decoder := json.NewDecoder(req.Body)
+	err = decoder.Decode(&request)
+
+	if err != nil {
+		http.Error(writer, "error in deserializing request", http.StatusInternalServerError)
+		return
+	}
+
+	if request.Email == "" || request.Password == "" {
+		http.Error(writer, "email or password cannot be empty", http.StatusBadRequest)
+		return
+	}
+
+	dbUser, err := config.Database.GetUserByID(req.Context(), uid)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			http.Error(writer, "user not found", http.StatusBadRequest)
+			return
+		}
+
+		http.Error(writer, "error in communicating to database", http.StatusInternalServerError)
+		return
+	}
+
+	if uid != dbUser.ID {
+		http.Error(writer, "invalid token", http.StatusUnauthorized)
+		return
+	}
+
+	hashed, err := auth.HashPassword(request.Password)
+	if err != nil {
+		http.Error(writer, "error hashing password", http.StatusInternalServerError)
+		return
+	}
+
+	dbUser, err = config.Database.UpdateUser(req.Context(), database.UpdateUserParams{
+		UpdatedAt:      time.Now(),
+		Email:          request.Email,
+		HashedPassword: hashed,
+		ID:             uid,
+	})
+
+	if err != nil {
+		if err == sql.ErrNoRows {
+			http.Error(writer, "user not found", http.StatusBadRequest)
+			return
+		}
+
+		http.Error(writer, "error in communicating to database", http.StatusInternalServerError)
+		return
+	}
+
+	user := models.UserFromDatabase(dbUser)
+
+	data, err := json.Marshal(user)
+	if err != nil {
+		http.Error(writer, "error serializing user", http.StatusInternalServerError)
+		return
+	}
+
+	writer.Header().Set("Content-Type", "application/json")
+	writer.WriteHeader(http.StatusOK)
+
+	writer.Write(data)
+}

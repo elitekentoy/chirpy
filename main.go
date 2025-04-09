@@ -60,6 +60,9 @@ func main() {
 	// Define revoke token endpoint
 	serveMux.HandleFunc("POST /api/revoke", apiConfig.handlerRevokeRefreshToken)
 
+	// Define update user endpoint
+	serveMux.HandleFunc("PUT /api/users", apiConfig.handlerUpdateUserDetails)
+
 	// Define metric endpoint
 	serveMux.HandleFunc("GET /admin/metrics", apiConfig.handlerMetrics)
 
