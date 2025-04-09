@@ -60,6 +60,9 @@ func main() {
 	// Define revoke token endpoint
 	serveMux.HandleFunc("POST /api/revoke", apiConfig.handlerRevokeRefreshToken)
 
+	// Define polka webhooks
+	serveMux.HandleFunc("POST /api/polka/webhooks", apiConfig.handlerPolka)
+
 	// Define update user endpoint
 	serveMux.HandleFunc("PUT /api/users", apiConfig.handlerUpdateUserDetails)
 

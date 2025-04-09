@@ -14,6 +14,7 @@ type User struct {
 	Email        string    `json:"email"`
 	Token        string    `json:"token,omitempty"`
 	RefreshToken string    `json:"refresh_token,omitempty"`
+	IsChirpyRed  bool      `json:"is_chirpy_red"`
 }
 
 func UserFromDatabase(dbUser database.User) User {
@@ -25,6 +26,7 @@ func UserFromDatabase(dbUser database.User) User {
 		Email:        dbUser.Email,
 		Token:        "",
 		RefreshToken: "",
+		IsChirpyRed:  dbUser.IsChirpyRed.Bool,
 	}
 }
 
@@ -37,5 +39,6 @@ func UserFromDatabaseWithTokens(dbUser database.User, token string, refreshToken
 		Email:        dbUser.Email,
 		Token:        token,
 		RefreshToken: refreshToken,
+		IsChirpyRed:  dbUser.IsChirpyRed.Bool,
 	}
 }

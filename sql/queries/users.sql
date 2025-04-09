@@ -26,3 +26,6 @@ RETURNING *;
 -- name: GetUserByID :one
 SELECT * FROM users
 WHERE id = $1;
+
+-- name: UpdateChirpyRed :exec
+UPDATE users SET is_chirpy_red = $1 WHERE id = $2;
