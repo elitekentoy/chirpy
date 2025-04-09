@@ -132,3 +132,56 @@ func (config *apiConfig) handlerGetChirp(writer http.ResponseWriter, req *http.R
 
 	writer.Write(data)
 }
+
+func (config *apiConfig) handlerDeleteChirp(writer http.ResponseWriter, req *http.Request) {
+	headerToken, err := auth.GetBearerToken(req.Header)
+	if headerToken == "" || err != nil {
+		http.Error(writer, "invalid token", http.StatusUnauthorized)
+		return
+	}
+
+	uid, err := auth.ValidateJWT(headerToken, config.ApiSecret)
+	if uid == uuid.Nil || err != nil {
+		http.Error(writer, "invalid token", http.StatusUnauthorized)
+		return
+	}
+
+	chirpID := req.PathValue("chirpID")
+
+	if chirpID == "" {
+		http.Error(writer, "chirp id is not specified", http.StatusBadRequest)
+		return
+	}
+
+	chirpUUID, err := uuid.Parse(chirpID)
+	if err != nil {
+		http.Error(writer, "error parsing chirp id", http.StatusInternalServerError)
+		return
+	}
+
+	dbChirp, err := config.Database.GetChirpByID(req.Context(), chirpUUID)
+	if err != nil {
+
+		if err == sql.ErrNoRows {
+			http.Error(writer, "chirp id is not found", http.StatusNotFound)
+			return
+		}
+
+		http.Error(writer, "database error occured", http.StatusInternalServerError)
+		return
+	}
+
+	chirp := models.ChirpFromDatabase(dbChirp)
+	if uid != chirp.UserID {
+		http.Error(writer, "cannot access resource", http.StatusForbidden)
+		return
+	}
+
+	err = config.Database.DeleteChirpByID(req.Context(), chirp.ID)
+	if err != nil {
+		http.Error(writer, "database error occured", http.StatusInternalServerError)
+		return
+	}
+
+	writer.WriteHeader(http.StatusNoContent)
+}

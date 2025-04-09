@@ -63,6 +63,9 @@ func main() {
 	// Define update user endpoint
 	serveMux.HandleFunc("PUT /api/users", apiConfig.handlerUpdateUserDetails)
 
+	// Define delete chip endpoint
+	serveMux.HandleFunc("DELETE /api/chirps/{chirpID}", apiConfig.handlerDeleteChirp)
+
 	// Define metric endpoint
 	serveMux.HandleFunc("GET /admin/metrics", apiConfig.handlerMetrics)
 
