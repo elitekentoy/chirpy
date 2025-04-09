@@ -13,9 +13,8 @@ import (
 )
 
 type UsersRequestBody struct {
-	Email            string `json:"email"`
-	Password         string `json:"password"`
-	ExpiresInSeconds *int   `json:"expires_in_seconds"`
+	Email    string `json:"email"`
+	Password string `json:"password"`
 }
 
 func (config *apiConfig) handlerUsers(writer http.ResponseWriter, req *http.Request) {
@@ -48,7 +47,7 @@ func (config *apiConfig) handlerUsers(writer http.ResponseWriter, req *http.Requ
 		HashedPassword: hashedPassword,
 	})
 
-	user := models.UserFromDatabase(dbUser, "")
+	user := models.UserFromDatabase(dbUser)
 
 	if err != nil {
 		http.Error(writer, "error occured in database", http.StatusInternalServerError)
@@ -75,16 +74,12 @@ func (config *apiConfig) handlerLogin(writer http.ResponseWriter, req *http.Requ
 
 	if err != nil {
 		http.Error(writer, "error deserializing request", http.StatusInternalServerError)
+		return
 	}
 
 	if request.Email == "" || request.Password == "" {
 		http.Error(writer, "email or password cannot be empty", http.StatusBadRequest)
 		return
-	}
-
-	expiry := 3600
-	if request.ExpiresInSeconds != nil && (*request.ExpiresInSeconds > 3600) {
-		expiry = *request.ExpiresInSeconds
 	}
 
 	dbUser, err := config.Database.GetUserByEmail(req.Context(), request.Email)
@@ -106,13 +101,34 @@ func (config *apiConfig) handlerLogin(writer http.ResponseWriter, req *http.Requ
 		return
 	}
 
-	token, err := auth.MakeJWT(dbUser.ID, config.ApiSecret, time.Duration(expiry)*time.Second)
+	accessToken, err := auth.MakeJWT(dbUser.ID, config.ApiSecret, time.Duration(ACCESS_TOKEN_EXPIRY_IN_HOURS)*time.Hour)
 	if err != nil {
 		http.Error(writer, "cannot create token", http.StatusInternalServerError)
 		return
 	}
 
-	user := models.UserFromDatabase(dbUser, token)
+	refreshToken, err := auth.MakeRefreshToken()
+	if err != nil {
+		http.Error(writer, "cannot create refresh token", http.StatusInternalServerError)
+	}
+
+	dbRefreshToken, err := config.Database.CreateRefreshToken(req.Context(), database.CreateRefreshTokenParams{
+		Token:     refreshToken,
+		CreatedAt: time.Now().UTC(),
+		UpdatedAt: time.Now().UTC(),
+		UserID: uuid.NullUUID{
+			UUID:  dbUser.ID,
+			Valid: true,
+		},
+		ExpiresAt: time.Now().Add(time.Duration(REFRESH_TOKEN_EXPIRY_IN_HOURS) * time.Hour),
+	})
+
+	if err != nil {
+		http.Error(writer, "error creating refresh token", http.StatusInternalServerError)
+		return
+	}
+
+	user := models.UserFromDatabaseWithTokens(dbUser, accessToken, dbRefreshToken.Token)
 	data, err := json.Marshal(user)
 
 	if err != nil {
