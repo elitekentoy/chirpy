@@ -11,6 +11,20 @@ import (
 	"github.com/google/uuid"
 )
 
+func GetAPIKey(headers http.Header) (string, error) {
+	auth := headers.Get("Authorization")
+	if auth == "" {
+		return auth, errors.New("auth token does not exist")
+	}
+
+	token, found := strings.CutPrefix(auth, "ApiKey ")
+	if !found {
+		return "", errors.New("invalid token")
+	}
+
+	return token, nil
+}
+
 func GetBearerToken(headers http.Header) (string, error) {
 	auth := headers.Get("Authorization")
 	if auth == "" {

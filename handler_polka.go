@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"net/http"
 
+	"github.com/elitekentoy/chirpy/internal/auth"
 	"github.com/elitekentoy/chirpy/internal/database"
 	"github.com/google/uuid"
 )
@@ -16,9 +17,15 @@ type PolkaRequestBody struct {
 
 func (config *apiConfig) handlerPolka(writer http.ResponseWriter, req *http.Request) {
 
+	apiKey, err := auth.GetAPIKey(req.Header)
+	if apiKey == "" || err != nil || apiKey != config.PolkaSecret {
+		http.Error(writer, "invalid token", http.StatusUnauthorized)
+		return
+	}
+
 	request := PolkaRequestBody{}
 	decoder := json.NewDecoder(req.Body)
-	err := decoder.Decode(&request)
+	err = decoder.Decode(&request)
 
 	if err != nil {
 		http.Error(writer, "error deserializing request", http.StatusInternalServerError)

@@ -26,6 +26,7 @@ func main() {
 		FileserverHits: atomic.Int32{},
 		Database:       database.New(db),
 		ApiSecret:      os.Getenv("SECRET_KEY"),
+		PolkaSecret:    os.Getenv("POLKA_SECRET_KEY"),
 	}
 
 	serveMux := http.NewServeMux()

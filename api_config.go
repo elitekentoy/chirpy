@@ -12,6 +12,7 @@ type apiConfig struct {
 	FileserverHits atomic.Int32
 	Database       *database.Queries
 	ApiSecret      string
+	PolkaSecret    string
 }
 
 func (config *apiConfig) MiddlewareMetricInc(next http.Handler) http.Handler {
