@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"encoding/json"
 	"net/http"
+	"sort"
 	"time"
 
 	"github.com/elitekentoy/chirpy/internal/auth"
@@ -72,7 +73,7 @@ func (config *apiConfig) handlerCreateChirp(writer http.ResponseWriter, req *htt
 func (config *apiConfig) handlerGetChirps(writer http.ResponseWriter, req *http.Request) {
 	authorID := req.URL.Query().Get("author_id")
 	uid, err := uuid.Parse(authorID)
-	if err != nil {
+	if err != nil && authorID != "" {
 		http.Error(writer, "error parsing user id", http.StatusInternalServerError)
 		return
 	}
@@ -85,6 +86,13 @@ func (config *apiConfig) handlerGetChirps(writer http.ResponseWriter, req *http.
 		dbChirps, err = config.Database.GetChirpsByUserID(req.Context(), uuid.NullUUID{
 			UUID:  uid,
 			Valid: true,
+		})
+	}
+
+	sortOrder := req.URL.Query().Get("sort")
+	if sortOrder == "desc" {
+		sort.Slice(dbChirps, func(i, j int) bool {
+			return dbChirps[i].CreatedAt.After(dbChirps[j].CreatedAt)
 		})
 	}
 
