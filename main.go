@@ -22,11 +22,10 @@ func main() {
 		log.Fatal("cannot initialize database")
 	}
 
-	dbQueries := database.New(db)
-
 	apiConfig := &apiConfig{
 		FileserverHits: atomic.Int32{},
-		Database:       dbQueries,
+		Database:       database.New(db),
+		ApiSecret:      os.Getenv("SECRET_KEY"),
 	}
 
 	serveMux := http.NewServeMux()

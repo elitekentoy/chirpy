@@ -13,8 +13,9 @@ import (
 )
 
 type UsersRequestBody struct {
-	Email    string `json:"email"`
-	Password string `json:"password"`
+	Email            string `json:"email"`
+	Password         string `json:"password"`
+	ExpiresInSeconds *int   `json:"expires_in_seconds"`
 }
 
 func (config *apiConfig) handlerUsers(writer http.ResponseWriter, req *http.Request) {
@@ -47,7 +48,7 @@ func (config *apiConfig) handlerUsers(writer http.ResponseWriter, req *http.Requ
 		HashedPassword: hashedPassword,
 	})
 
-	user := models.UserFromDatabase(dbUser)
+	user := models.UserFromDatabase(dbUser, "")
 
 	if err != nil {
 		http.Error(writer, "error occured in database", http.StatusInternalServerError)
@@ -81,6 +82,11 @@ func (config *apiConfig) handlerLogin(writer http.ResponseWriter, req *http.Requ
 		return
 	}
 
+	expiry := 3600
+	if request.ExpiresInSeconds != nil && (*request.ExpiresInSeconds > 3600) {
+		expiry = *request.ExpiresInSeconds
+	}
+
 	dbUser, err := config.Database.GetUserByEmail(req.Context(), request.Email)
 	if err != nil {
 
@@ -100,7 +106,13 @@ func (config *apiConfig) handlerLogin(writer http.ResponseWriter, req *http.Requ
 		return
 	}
 
-	user := models.UserFromDatabase(dbUser)
+	token, err := auth.MakeJWT(dbUser.ID, config.ApiSecret, time.Duration(expiry)*time.Second)
+	if err != nil {
+		http.Error(writer, "cannot create token", http.StatusInternalServerError)
+		return
+	}
+
+	user := models.UserFromDatabase(dbUser, token)
 	data, err := json.Marshal(user)
 
 	if err != nil {

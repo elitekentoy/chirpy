@@ -6,21 +6,33 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/elitekentoy/chirpy/internal/auth"
 	"github.com/elitekentoy/chirpy/internal/database"
 	"github.com/elitekentoy/chirpy/models"
 	"github.com/google/uuid"
 )
 
 type ChirpRequestBody struct {
-	Body   string    `json:"body"`
-	UserID uuid.UUID `json:"user_id"`
+	Body string `json:"body"`
 }
 
 func (config *apiConfig) handlerCreateChirp(writer http.ResponseWriter, req *http.Request) {
 
+	authToken, err := auth.GetBearerToken(req.Header)
+	if err != nil {
+		http.Error(writer, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	userID, err := auth.ValidateJWT(authToken, config.ApiSecret)
+	if err != nil {
+		http.Error(writer, "invalid token", http.StatusUnauthorized)
+		return
+	}
+
 	request := ChirpRequestBody{}
 	decoder := json.NewDecoder(req.Body)
-	err := decoder.Decode(&request)
+	err = decoder.Decode(&request)
 
 	if err != nil {
 		http.Error(writer, "error decoding the request", http.StatusInternalServerError)
@@ -33,13 +45,14 @@ func (config *apiConfig) handlerCreateChirp(writer http.ResponseWriter, req *htt
 		UpdatedAt: time.Now(),
 		Body:      request.Body,
 		UserID: uuid.NullUUID{
-			UUID:  request.UserID,
+			UUID:  userID,
 			Valid: true,
 		},
 	})
 
 	if err != nil {
 		http.Error(writer, "error processing to the database", http.StatusInternalServerError)
+		return
 	}
 
 	chirp := models.ChirpFromDatabase(dbChirp)
