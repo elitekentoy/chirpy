@@ -4,33 +4,26 @@ import (
 	"fmt"
 	"net/http"
 	"os"
+
+	"github.com/elitekentoy/chirpy/commons"
+	"github.com/elitekentoy/chirpy/helpers"
+	"github.com/elitekentoy/chirpy/properties"
 )
 
 func (config *apiConfig) handlerReset(writer http.ResponseWriter, req *http.Request) {
 
-	platform := os.Getenv("PLATFORM")
-	if platform != "dev" {
-		http.Error(writer, "you do not have permissions for reset", http.StatusForbidden)
+	if os.Getenv(commons.PLATFORM_KEY) != commons.DEV {
+		helpers.RespondWithError(writer, properties.NO_PERMISSIONS, http.StatusForbidden)
 		return
 	}
 
 	err := config.Database.DeleteUsers(req.Context())
 	if err != nil {
-		http.Error(writer, "cannot perform operations in database", http.StatusInternalServerError)
+		helpers.HandleDatabaseError(writer, err)
 		return
 	}
 
-	config.FileserverHits.Store(0)
+	config.FileserverHits.Store(commons.DEFAULT_HITS)
 
-	// Set Content Type
-	writer.Header().Set("Cache-Control", "no-cache")
-	writer.Header().Set("Content-Type", "text/plain; charset=utf-8")
-
-	// Set the status code
-	writer.WriteHeader(http.StatusOK)
-
-	data := fmt.Sprintf("Hits: %d", config.FileserverHits.Load())
-
-	// Write the response body
-	writer.Write([]byte(data))
+	helpers.RespondToClientWithBody(writer, fmt.Sprintf("Hits: %d", config.FileserverHits.Load()), http.StatusOK)
 }

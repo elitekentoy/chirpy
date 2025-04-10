@@ -11,4 +11,5 @@ const (
 	TOKEN_GENERIC_ERROR       = "cannot create token"
 	INVALID_TOKEN             = "invalid token"
 	EXPIRED_TOKEN             = "token has expired"
+	NO_PERMISSIONS            = "you do not have permissions for this operation"
 )

@@ -9,6 +9,15 @@ import (
 	"github.com/go-http-utils/headers"
 )
 
+func RespondToClientWithBody(writer http.ResponseWriter, payload any, status int) {
+	writer.Header().Set(headers.CacheControl, commons.NO_CACHE)
+	writer.Header().Set(headers.ContentType, commons.TEXT_PLAIN)
+
+	if err := json.NewEncoder(writer).Encode(payload); err != nil {
+		RespondWithError(writer, properties.SERIALIZING_ISSUE, http.StatusInternalServerError)
+	}
+}
+
 func RespondToClient(writer http.ResponseWriter, payload any, status int) {
 	writer.Header().Set(headers.ContentType, commons.APPLICATION_JSON)
 	writer.WriteHeader(status)
