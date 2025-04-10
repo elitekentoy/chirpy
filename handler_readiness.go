@@ -1,14 +1,16 @@
 package main
 
-import "net/http"
+import (
+	"net/http"
+
+	"github.com/elitekentoy/chirpy/commons"
+	"github.com/elitekentoy/chirpy/helpers"
+	"github.com/go-http-utils/headers"
+)
 
 func handlerReadiness(writer http.ResponseWriter, req *http.Request) {
-	// Set Content Type
-	req.Header.Set("content-type", "text/plain; charset=utf-8")
 
-	// Set the status coke
-	writer.WriteHeader(http.StatusOK)
+	req.Header.Set(headers.ContentType, commons.TEXT_PLAIN)
 
-	// Write the response body
-	writer.Write([]byte("OK"))
+	helpers.RespondToClientWithBody(writer, "OK", http.StatusOK)
 }
