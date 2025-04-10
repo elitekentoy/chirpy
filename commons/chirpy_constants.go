@@ -11,4 +11,5 @@ const (
 	PLATFORM_KEY         = "PLATFORM"
 	DEV                  = "dev"
 	DEFAULT_HITS         = 0
+	USER_UPGRADED        = "user.upgraded"
 )

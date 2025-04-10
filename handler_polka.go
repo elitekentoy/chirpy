@@ -2,45 +2,38 @@ package main
 
 import (
 	"database/sql"
-	"encoding/json"
 	"net/http"
 
+	"github.com/elitekentoy/chirpy/helpers"
 	"github.com/elitekentoy/chirpy/internal/auth"
 	"github.com/elitekentoy/chirpy/internal/database"
+	"github.com/elitekentoy/chirpy/models"
+	"github.com/elitekentoy/chirpy/properties"
 	"github.com/google/uuid"
 )
-
-type PolkaRequestBody struct {
-	Event string
-	Data  map[string]string
-}
 
 func (config *apiConfig) handlerPolka(writer http.ResponseWriter, req *http.Request) {
 
 	apiKey, err := auth.GetAPIKey(req.Header)
 	if apiKey == "" || err != nil || apiKey != config.PolkaSecret {
-		http.Error(writer, "invalid token", http.StatusUnauthorized)
+		helpers.RespondWithError(writer, properties.INVALID_TOKEN, http.StatusUnauthorized)
 		return
 	}
 
-	request := PolkaRequestBody{}
-	decoder := json.NewDecoder(req.Body)
-	err = decoder.Decode(&request)
-
+	request, err := models.DecodePolkaRequestBody(req)
 	if err != nil {
-		http.Error(writer, "error deserializing request", http.StatusInternalServerError)
+		helpers.RespondToClientWithBody(writer, properties.DESERIALIZING_ISSUE, http.StatusBadRequest)
 		return
 	}
 
-	if request.Event != "user.upgraded" {
-		http.Error(writer, "we dont care", http.StatusNoContent)
+	if !request.IsUserUpgradeEvent() {
+		helpers.RespondWithError(writer, properties.CANNOT_PROCESS, http.StatusNoContent)
 		return
 	}
 
-	userId := request.Data["user_id"]
-	uid, err := uuid.Parse(userId)
+	uid, err := uuid.Parse(request.GetUserID())
 	if err != nil {
-		http.Error(writer, "error parsing user id", http.StatusInternalServerError)
+		helpers.RespondWithError(writer, properties.INCORRECT_INPUT, http.StatusBadRequest)
 		return
 	}
 
@@ -53,14 +46,9 @@ func (config *apiConfig) handlerPolka(writer http.ResponseWriter, req *http.Requ
 	})
 
 	if err != nil {
-		if err == sql.ErrNoRows {
-			http.Error(writer, "user not found", http.StatusNotFound)
-			return
-		}
-
-		http.Error(writer, "error communciting to the database", http.StatusInternalServerError)
+		helpers.HandleDatabaseError(writer, err)
 		return
 	}
 
-	writer.WriteHeader(http.StatusNoContent)
+	helpers.RespondToClient(writer, nil, http.StatusNoContent)
 }
