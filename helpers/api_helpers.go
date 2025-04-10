@@ -9,13 +9,32 @@ import (
 	"github.com/go-http-utils/headers"
 )
 
-func RespondToClientWithBody(writer http.ResponseWriter, payload any, status int) {
+func RespondToClientWithHTMLBody(writer http.ResponseWriter, payload any, status int) {
+	writer.Header().Set(headers.CacheControl, commons.NO_CACHE)
+	writer.Header().Set(headers.ContentType, commons.TEXT_HTML)
+
+	// Type assert payload to string and convert it to []byte
+	strPayload, ok := payload.(string)
+	if !ok {
+		RespondWithError(writer, properties.INVALID_PAYLOAD_TYPE, http.StatusBadRequest)
+		return
+	}
+
+	writer.Write([]byte(strPayload))
+}
+
+func RespondToClientWithPlainBody(writer http.ResponseWriter, payload any, status int) {
 	writer.Header().Set(headers.CacheControl, commons.NO_CACHE)
 	writer.Header().Set(headers.ContentType, commons.TEXT_PLAIN)
 
-	if err := json.NewEncoder(writer).Encode(payload); err != nil {
-		RespondWithError(writer, properties.SERIALIZING_ISSUE, http.StatusInternalServerError)
+	// Type assert payload to string and convert it to []byte
+	strPayload, ok := payload.(string)
+	if !ok {
+		RespondWithError(writer, properties.INVALID_PAYLOAD_TYPE, http.StatusBadRequest)
+		return
 	}
+
+	writer.Write([]byte(strPayload))
 }
 
 func RespondToClient(writer http.ResponseWriter, payload any, status int) {

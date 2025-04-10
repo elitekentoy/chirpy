@@ -3,21 +3,9 @@ package main
 import (
 	"fmt"
 	"net/http"
+
+	"github.com/elitekentoy/chirpy/helpers"
 )
-
-func (config *apiConfig) handlerHits(writer http.ResponseWriter, req *http.Request) {
-	// Set Content Type
-	writer.Header().Set("Cache-Control", "no-cache")
-	writer.Header().Set("Content-Type", "text/plain; charset=utf-8")
-
-	// Set the status code
-	writer.WriteHeader(http.StatusOK)
-
-	data := fmt.Sprintf("Hits: %d", config.FileserverHits.Load())
-
-	// Write the response body
-	writer.Write([]byte(data))
-}
 
 func (config *apiConfig) handlerMetrics(writer http.ResponseWriter, req *http.Request) {
 	template := `<html>
@@ -26,10 +14,6 @@ func (config *apiConfig) handlerMetrics(writer http.ResponseWriter, req *http.Re
 						<p>Chirpy has been visited %d times!</p>
 						</body>
 					</html>`
-	data := fmt.Sprintf(template, config.FileserverHits.Load())
 
-	writer.Header().Set("Cache-Control", "no-cache")
-	writer.Header().Set("Content-Type", "text/html; charset=utf-8")
-
-	writer.Write([]byte(data))
+	helpers.RespondToClientWithHTMLBody(writer, fmt.Sprintf(template, config.FileserverHits.Load()), http.StatusOK)
 }

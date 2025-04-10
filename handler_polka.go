@@ -22,7 +22,7 @@ func (config *apiConfig) handlerPolka(writer http.ResponseWriter, req *http.Requ
 
 	request, err := models.DecodePolkaRequestBody(req)
 	if err != nil {
-		helpers.RespondToClientWithBody(writer, properties.DESERIALIZING_ISSUE, http.StatusBadRequest)
+		helpers.RespondToClientWithPlainBody(writer, properties.DESERIALIZING_ISSUE, http.StatusBadRequest)
 		return
 	}
 

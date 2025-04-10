@@ -13,4 +13,5 @@ const (
 	EXPIRED_TOKEN             = "token has expired"
 	NO_PERMISSIONS            = "you do not have permissions for this operation"
 	CANNOT_PROCESS            = "cannot process request"
+	INVALID_PAYLOAD_TYPE      = "invalid payload_type"
 )

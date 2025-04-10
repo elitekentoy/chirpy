@@ -25,5 +25,5 @@ func (config *apiConfig) handlerReset(writer http.ResponseWriter, req *http.Requ
 
 	config.FileserverHits.Store(commons.DEFAULT_HITS)
 
-	helpers.RespondToClientWithBody(writer, fmt.Sprintf("Hits: %d", config.FileserverHits.Load()), http.StatusOK)
+	helpers.RespondToClientWithPlainBody(writer, fmt.Sprintf("Hits: %d", config.FileserverHits.Load()), http.StatusOK)
 }

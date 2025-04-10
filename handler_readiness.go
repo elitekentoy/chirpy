@@ -12,5 +12,5 @@ func handlerReadiness(writer http.ResponseWriter, req *http.Request) {
 
 	req.Header.Set(headers.ContentType, commons.TEXT_PLAIN)
 
-	helpers.RespondToClientWithBody(writer, "OK", http.StatusOK)
+	helpers.RespondToClientWithPlainBody(writer, "OK", http.StatusOK)
 }
