@@ -10,4 +10,5 @@ const (
 	INCORRECT_INPUT           = "incorrect input"
 	TOKEN_GENERIC_ERROR       = "cannot create token"
 	INVALID_TOKEN             = "invalid token"
+	EXPIRED_TOKEN             = "token has expired"
 )

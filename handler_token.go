@@ -2,83 +2,69 @@ package main
 
 import (
 	"database/sql"
-	"encoding/json"
 	"net/http"
 	"time"
 
+	"github.com/elitekentoy/chirpy/commons"
+	"github.com/elitekentoy/chirpy/helpers"
 	"github.com/elitekentoy/chirpy/internal/auth"
 	"github.com/elitekentoy/chirpy/internal/database"
 	"github.com/elitekentoy/chirpy/models"
+	"github.com/elitekentoy/chirpy/properties"
 )
 
 func (config *apiConfig) handlerRefreshToken(writer http.ResponseWriter, req *http.Request) {
 	headerToken, err := auth.GetBearerToken(req.Header)
 	if err != nil {
-		http.Error(writer, "invalid request", http.StatusBadRequest)
+		helpers.RespondWithError(writer, properties.INVALID_TOKEN, http.StatusUnauthorized)
 		return
 	}
 
 	dbToken, err := config.Database.GetRefreshTokenByToken(req.Context(), headerToken)
 	if err != nil {
-		if err == sql.ErrNoRows {
-			http.Error(writer, "token not found", http.StatusBadRequest)
-			return
-		}
-
-		http.Error(writer, "database communication error", http.StatusInternalServerError)
+		helpers.HandleDatabaseError(writer, err)
 		return
 	}
 
 	token := models.RefreshTokenFromDatabase(dbToken)
 	if token.IsExpired() {
-		http.Error(writer, "token has expired", http.StatusUnauthorized)
+		helpers.RespondWithError(writer, properties.EXPIRED_TOKEN, http.StatusUnauthorized)
 		return
 	}
 
-	accessToken, err := auth.MakeJWT(token.UserID, config.ApiSecret, time.Duration(ACCESS_TOKEN_EXPIRY_IN_HOURS)*time.Hour)
+	accessToken, err := auth.MakeJWT(token.UserID, config.ApiSecret, commons.ACCESS_TOKEN_EXPIRY)
 	if err != nil {
-		http.Error(writer, "error creating token", http.StatusInternalServerError)
+		helpers.RespondWithError(writer, properties.TOKEN_GENERIC_ERROR, http.StatusInternalServerError)
 		return
 	}
 
-	content := map[string]string{}
-	content["token"] = accessToken
-
-	data, err := json.Marshal(content)
-	if err != nil {
-		http.Error(writer, "error serializing token", http.StatusInternalServerError)
-		return
+	content := models.TokenResponse{
+		Token: accessToken,
 	}
 
-	writer.Header().Set("Content-Type", "application/json")
-	writer.WriteHeader(http.StatusOK)
-
-	writer.Write(data)
+	helpers.RespondToClient(writer, content, http.StatusOK)
 }
 
 func (config *apiConfig) handlerRevokeRefreshToken(writer http.ResponseWriter, req *http.Request) {
 	headerToken, err := auth.GetBearerToken(req.Header)
 	if err != nil {
-		http.Error(writer, "invalid request", http.StatusBadRequest)
+		helpers.RespondWithError(writer, properties.INVALID_TOKEN, http.StatusUnauthorized)
+		return
 	}
 
 	err = config.Database.UpdateRefreshTokenOnRevoke(req.Context(), database.UpdateRefreshTokenOnRevokeParams{
 		Token: headerToken,
 		RevokedAt: sql.NullTime{
-			Time:  time.Now(),
+			Time:  time.Now().UTC(),
 			Valid: true,
 		},
-		UpdatedAt: time.Now(),
+		UpdatedAt: time.Now().UTC(),
 	})
 
 	if err != nil {
-		if err == sql.ErrNoRows {
-			http.Error(writer, "token not found", http.StatusBadRequest)
-		}
-
-		http.Error(writer, "error in communication with database", http.StatusInternalServerError)
+		helpers.HandleDatabaseError(writer, err)
 		return
 	}
 
-	writer.WriteHeader(http.StatusNoContent)
+	helpers.RespondToClient(writer, nil, http.StatusNoContent)
 }
