@@ -7,6 +7,7 @@ import (
 	"os"
 	"sync/atomic"
 
+	"github.com/elitekentoy/chirpy/commons"
 	"github.com/elitekentoy/chirpy/internal/database"
 	"github.com/joho/godotenv"
 	_ "github.com/lib/pq"
@@ -32,7 +33,7 @@ func main() {
 	serveMux := http.NewServeMux()
 
 	// Setup file serving with middleware to count hits
-	serveMux.Handle("/app/", apiConfig.MiddlewareMetricInc(http.StripPrefix("/app", http.FileServer(http.Dir(root)))))
+	serveMux.Handle("/app/", apiConfig.MiddlewareMetricInc(http.StripPrefix("/app", http.FileServer(http.Dir(commons.ROOT)))))
 
 	// Define health check endpoint
 	serveMux.HandleFunc("GET /api/healthz", handlerReadiness)
@@ -47,7 +48,7 @@ func main() {
 	serveMux.HandleFunc("POST /api/validate_chirp", handlerValidateChirp)
 
 	// Define users endpoint
-	serveMux.HandleFunc("POST /api/users", apiConfig.handlerUsers)
+	serveMux.HandleFunc("POST /api/users", apiConfig.handlerRegisterUser)
 
 	// Define create chirp endpoint
 	serveMux.HandleFunc("POST /api/chirps", apiConfig.handlerCreateChirp)
@@ -79,9 +80,9 @@ func main() {
 	// Setup HTTP Server
 	server := http.Server{
 		Handler: serveMux,
-		Addr:    ":" + listeningPort,
+		Addr:    ":" + commons.LISTENING_PORT,
 	}
 
-	log.Printf("Serving files from %s on port: %s\n", root, listeningPort)
+	log.Printf("Serving files from %s on port: %s\n", commons.ROOT, commons.LISTENING_PORT)
 	log.Fatal(server.ListenAndServe())
 }
