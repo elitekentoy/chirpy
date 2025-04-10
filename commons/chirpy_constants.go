@@ -12,4 +12,6 @@ const (
 	DEV                  = "dev"
 	DEFAULT_HITS         = 0
 	USER_UPGRADED        = "user.upgraded"
+	CHIRP_LIMIt          = 140
+	MASK                 = "****"
 )

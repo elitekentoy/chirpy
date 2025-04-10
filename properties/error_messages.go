@@ -14,4 +14,8 @@ const (
 	NO_PERMISSIONS            = "you do not have permissions for this operation"
 	CANNOT_PROCESS            = "cannot process request"
 	INVALID_PAYLOAD_TYPE      = "invalid payload_type"
+	MISSING_ID                = "missing id"
+	PARSING_ISSUE             = "encountered issues with parsing"
+	GENERIC_ERROR             = "something went wrong"
+	CHIRP_EXCEEDED            = "chirp is too long"
 )

@@ -1,49 +1,42 @@
 package main
 
 import (
-	"database/sql"
-	"encoding/json"
 	"net/http"
 	"sort"
 	"time"
 
+	"github.com/elitekentoy/chirpy/helpers"
 	"github.com/elitekentoy/chirpy/internal/auth"
 	"github.com/elitekentoy/chirpy/internal/database"
 	"github.com/elitekentoy/chirpy/models"
+	"github.com/elitekentoy/chirpy/properties"
 	"github.com/google/uuid"
 )
-
-type ChirpRequestBody struct {
-	Body string `json:"body"`
-}
 
 func (config *apiConfig) handlerCreateChirp(writer http.ResponseWriter, req *http.Request) {
 
 	authToken, err := auth.GetBearerToken(req.Header)
 	if err != nil {
-		http.Error(writer, err.Error(), http.StatusBadRequest)
+		helpers.RespondWithError(writer, err.Error(), http.StatusUnauthorized)
 		return
 	}
 
 	userID, err := auth.ValidateJWT(authToken, config.ApiSecret)
 	if err != nil {
-		http.Error(writer, "invalid token", http.StatusUnauthorized)
+		helpers.RespondWithError(writer, properties.INVALID_TOKEN, http.StatusUnauthorized)
 		return
 	}
 
-	request := ChirpRequestBody{}
-	decoder := json.NewDecoder(req.Body)
-	err = decoder.Decode(&request)
-
+	request, err := models.DecodeChirpRequestBody(req)
 	if err != nil {
-		http.Error(writer, "error decoding the request", http.StatusInternalServerError)
+		helpers.RespondWithError(writer, properties.DESERIALIZING_ISSUE, http.StatusInternalServerError)
 		return
 	}
 
 	dbChirp, err := config.Database.CreateChirp(req.Context(), database.CreateChirpParams{
 		ID:        uuid.New(),
-		CreatedAt: time.Now(),
-		UpdatedAt: time.Now(),
+		CreatedAt: time.Now().UTC(),
+		UpdatedAt: time.Now().UTC(),
 		Body:      request.Body,
 		UserID: uuid.NullUUID{
 			UUID:  userID,
@@ -52,29 +45,18 @@ func (config *apiConfig) handlerCreateChirp(writer http.ResponseWriter, req *htt
 	})
 
 	if err != nil {
-		http.Error(writer, "error processing to the database", http.StatusInternalServerError)
+		helpers.HandleDatabaseError(writer, err)
 		return
 	}
 
-	chirp := models.ChirpFromDatabase(dbChirp)
-
-	data, err := json.Marshal(chirp)
-	if err != nil {
-		http.Error(writer, "error serializing chirp", http.StatusInternalServerError)
-		return
-	}
-
-	writer.WriteHeader(http.StatusCreated)
-	writer.Header().Set("Content-Type", "application/json")
-
-	writer.Write(data)
+	helpers.RespondToClient(writer, models.ChirpFromDatabase(dbChirp), http.StatusCreated)
 }
 
 func (config *apiConfig) handlerGetChirps(writer http.ResponseWriter, req *http.Request) {
 	authorID := req.URL.Query().Get("author_id")
 	uid, err := uuid.Parse(authorID)
 	if err != nil && authorID != "" {
-		http.Error(writer, "error parsing user id", http.StatusInternalServerError)
+		helpers.RespondWithError(writer, properties.PARSING_ISSUE, http.StatusInternalServerError)
 		return
 	}
 
@@ -89,16 +71,15 @@ func (config *apiConfig) handlerGetChirps(writer http.ResponseWriter, req *http.
 		})
 	}
 
-	sortOrder := req.URL.Query().Get("sort")
-	if sortOrder == "desc" {
+	if err != nil {
+		helpers.HandleDatabaseError(writer, err)
+		return
+	}
+
+	if req.URL.Query().Get("sort") == "desc" {
 		sort.Slice(dbChirps, func(i, j int) bool {
 			return dbChirps[i].CreatedAt.After(dbChirps[j].CreatedAt)
 		})
-	}
-
-	if err != nil {
-		http.Error(writer, "error connecting to the database", http.StatusInternalServerError)
-		return
 	}
 
 	chirps := []models.Chirp{}
@@ -106,107 +87,75 @@ func (config *apiConfig) handlerGetChirps(writer http.ResponseWriter, req *http.
 		chirps = append(chirps, models.ChirpFromDatabase(chirp))
 	}
 
-	data, err := json.Marshal(chirps)
-	if err != nil {
-		http.Error(writer, "error seraializing chirps", http.StatusInternalServerError)
-		return
-	}
-
-	writer.WriteHeader(http.StatusOK)
-	writer.Header().Set("Content-Type", "application/json")
-
-	writer.Write(data)
+	helpers.RespondToClient(writer, chirps, http.StatusOK)
 }
 
 func (config *apiConfig) handlerGetChirp(writer http.ResponseWriter, req *http.Request) {
 	chirpID := req.PathValue("chirpID")
 
 	if chirpID == "" {
-		http.Error(writer, "chirp id is not specified", http.StatusBadRequest)
+		http.Error(writer, properties.MISSING_ID, http.StatusBadRequest)
 		return
 	}
 
 	chirpUUID, err := uuid.Parse(chirpID)
 	if err != nil {
-		http.Error(writer, "error parsing chirp id", http.StatusInternalServerError)
+		http.Error(writer, properties.INCORRECT_INPUT, http.StatusBadRequest)
 		return
 	}
 
 	dbChirp, err := config.Database.GetChirpByID(req.Context(), chirpUUID)
 	if err != nil {
-
-		if err == sql.ErrNoRows {
-			http.Error(writer, "chirp id is not found", http.StatusNotFound)
-			return
-		}
-
-		http.Error(writer, "database error occured", http.StatusInternalServerError)
+		helpers.HandleDatabaseError(writer, err)
 		return
 	}
 
-	chirp := models.ChirpFromDatabase(dbChirp)
-
-	data, err := json.Marshal(chirp)
-	if err != nil {
-		http.Error(writer, "error in serializing chirp", http.StatusInternalServerError)
-		return
-	}
-
-	writer.Header().Set("Content-Type", "application/json")
-	writer.WriteHeader(http.StatusOK)
-
-	writer.Write(data)
+	helpers.RespondToClient(writer, models.ChirpFromDatabase(dbChirp), http.StatusOK)
 }
 
 func (config *apiConfig) handlerDeleteChirp(writer http.ResponseWriter, req *http.Request) {
 	headerToken, err := auth.GetBearerToken(req.Header)
 	if headerToken == "" || err != nil {
-		http.Error(writer, "invalid token", http.StatusUnauthorized)
+		helpers.RespondWithError(writer, properties.INVALID_TOKEN, http.StatusUnauthorized)
 		return
 	}
 
 	uid, err := auth.ValidateJWT(headerToken, config.ApiSecret)
 	if uid == uuid.Nil || err != nil {
-		http.Error(writer, "invalid token", http.StatusUnauthorized)
+		helpers.RespondWithError(writer, properties.INVALID_TOKEN, http.StatusUnauthorized)
 		return
 	}
 
 	chirpID := req.PathValue("chirpID")
 
 	if chirpID == "" {
-		http.Error(writer, "chirp id is not specified", http.StatusBadRequest)
+		helpers.RespondWithError(writer, properties.MISSING_ID, http.StatusBadRequest)
 		return
 	}
 
 	chirpUUID, err := uuid.Parse(chirpID)
 	if err != nil {
-		http.Error(writer, "error parsing chirp id", http.StatusInternalServerError)
+		helpers.RespondWithError(writer, properties.PARSING_ISSUE, http.StatusInternalServerError)
 		return
 	}
 
 	dbChirp, err := config.Database.GetChirpByID(req.Context(), chirpUUID)
 	if err != nil {
-
-		if err == sql.ErrNoRows {
-			http.Error(writer, "chirp id is not found", http.StatusNotFound)
-			return
-		}
-
-		http.Error(writer, "database error occured", http.StatusInternalServerError)
+		helpers.HandleDatabaseError(writer, err)
 		return
 	}
 
 	chirp := models.ChirpFromDatabase(dbChirp)
 	if uid != chirp.UserID {
-		http.Error(writer, "cannot access resource", http.StatusForbidden)
+		helpers.RespondWithError(writer, properties.NO_PERMISSIONS, http.StatusForbidden)
 		return
 	}
 
 	err = config.Database.DeleteChirpByID(req.Context(), chirp.ID)
 	if err != nil {
-		http.Error(writer, "database error occured", http.StatusInternalServerError)
+		helpers.HandleDatabaseError(writer, err)
 		return
 	}
 
-	writer.WriteHeader(http.StatusNoContent)
+	helpers.RespondToClient(writer, nil, http.StatusNoContent)
 }
