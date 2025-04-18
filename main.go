@@ -23,6 +23,11 @@ func main() {
 		log.Fatal("cannot initialize database")
 	}
 
+	port := os.Getenv("PORT")
+	if port == "" {
+		port = commons.LISTENING_PORT
+	}
+
 	apiConfig := &apiConfig{
 		FileserverHits: atomic.Int32{},
 		Database:       database.New(db),
@@ -80,7 +85,7 @@ func main() {
 	// Setup HTTP Server
 	server := http.Server{
 		Handler: serveMux,
-		Addr:    ":" + commons.LISTENING_PORT,
+		Addr:    ":" + port,
 	}
 
 	log.Printf("Serving files from %s on port: %s\n", commons.ROOT, commons.LISTENING_PORT)
